@@ -8,7 +8,7 @@ The repo ships the same Docker + Django + pgvector infrastructure you've been us
 
 ```bash
 cp .env.example .env
-# Put your AI_API_KEY in .env (or use Ollama — see the lesson)
+# Put your LLM_API_KEY in .env (or use Ollama — see the lesson)
 docker compose up -d
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
