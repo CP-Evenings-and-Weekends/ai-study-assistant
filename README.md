@@ -1,8 +1,8 @@
 # AI Study Assistant
 
-Capstone assignment for week 17: **complete the Study Assistant** by finishing everything from today's [lesson](https://github.com/CP-Evenings-and-Weekends/curriculum/blob/main/Module_06_AI_LLMs/week17/day3/README.md), then extend it with a delete endpoint.
+Capstone assignment for week 17: **complete the Study Assistant** by finishing everything from Part 1 of Saturday's [lesson](https://github.com/CP-Evenings-and-Weekends/curriculum/blob/main/Module_06_AI_LLMs/week17/day4/README.md), then extend it with a delete endpoint.
 
-**Work in the same `study_assistant` codebase you started Tuesday.** Do not start a fresh project. Tuesday gave you documents, chunking, embeddings, and the one-off `/api/ask/` endpoint; today adds conversations and history. If Tuesday's build isn't working yet, fix that first (the Tuesday assignment repo and lesson have everything you need).
+**Work in the same `study_assistant` codebase you started Tuesday.** Do not start a fresh project. Tuesday gave you documents, chunking, and embeddings; Thursday gave you the one-off `/api/ask/` endpoint; today adds conversations and history. If either earlier build isn't working yet, fix that first (the RAG Document Q&A assignment repo and the lessons have everything you need).
 
 The `docker-compose.yml`, `requirements.txt`, and `.env.example` in this repo are the same ones from Tuesday, included only as a fallback if your environment broke.
 
@@ -14,7 +14,7 @@ Implement every endpoint from the lesson's overview table:
 |---|---|---|
 | `POST` | `/api/documents/` | Upload → auto-chunk → batch-embed → save chunks (Tuesday) |
 | `GET`  | `/api/documents/` | List with `chunk_count` per document (Tuesday) |
-| `POST` | `/api/ask/` | One-off RAG answer, no history (Tuesday) |
+| `POST` | `/api/ask/` | One-off RAG answer, no history (Thursday) |
 | `POST` | `/api/conversations/` | Create a new conversation with a title |
 | `GET`  | `/api/conversations/<id>/` | Full conversation with messages |
 | `POST` | `/api/conversations/<id>/ask/` | RAG: retrieve → prompt with history → LLM → save both messages |
