@@ -1,13 +1,11 @@
-import requests
-from django.conf import settings
-from pgvector.django import CosineDistance
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Document, DocumentChunk
-from .serializers import DocumentSerializer, DocumentCreateSerializer, AskQuestionSerializer
+from .models import Document, DocumentChunk, Conversation
+from .serializers import DocumentSerializer, DocumentCreateSerializer, AskQuestionSerializer, ConversationSerializer, ConversationCreateSerializer
 from .chunking import chunk_text
 from .embeddings import generate_embeddings_batch
+from .rag import retrieve_relevant_chunks, generate_rag_response, ask_with_rag
 
 
 @api_view(["GET", "POST"])
@@ -45,65 +43,95 @@ def document_list(request):
 
 @api_view(["POST"])
 def ask_question(request):
-    """Embed the question, retrieve top-5 relevant chunks, and generate a grounded answer."""
+    """One-off RAG answer, no conversation history."""
     serializer = AskQuestionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     question = serializer.validated_data["question"]
 
-    question_embedding = generate_embeddings_batch([question])[0]
+    chunks = retrieve_relevant_chunks(question, top_k=5)
 
-    results = (
-        DocumentChunk.objects.annotate(
-            distance=CosineDistance("embedding", question_embedding)
-        )
-        .select_related("document")
-        .order_by("distance")[:5]
-    )
-
-    if not results:
+    if not chunks:
         return Response(
             {"answer": "No documents have been ingested yet.", "sources": []},
             status=status.HTTP_200_OK,
         )
 
-    context = "\n\n".join(
-        f"[{chunk.document.title}]\n{chunk.chunk_text}" for chunk in results
-    )
-
-    system_prompt = (
-        "You are a study assistant. Answer the user's question using ONLY the "
-        "information in the <context> below. If the context does not contain "
-        "enough information to answer the question, say so explicitly — do not "
-        "make up or infer information that isn't present in the context.\n\n"
-        f"<context>\n{context}\n</context>"
-    )
-
-    llm_response = requests.post(
-        f"{settings.LLM_API_BASE_URL}/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {settings.LLM_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": settings.LLM_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question},
-            ],
-            "temperature": 0.3,
-        },
-        timeout=60,
-    )
-    llm_response.raise_for_status()
-    answer = llm_response.json()["choices"][0]["message"]["content"]
+    answer = generate_rag_response(question, chunks)
 
     sources = [
         {
-            "title": chunk.document.title,
-            "preview": chunk.chunk_text[:200],
-            "relevance_score": round(1 - chunk.distance, 4),
+            "title": chunk["document_title"],
+            "preview": chunk["chunk_text"][:200],
+            "relevance_score": round(1 - chunk["distance"], 4),
         }
-        for chunk in results
+        for chunk in chunks
     ]
 
     return Response({"answer": answer, "sources": sources})
+
+
+@api_view(["POST"])
+def conversation_create(request):
+    """Start a new conversation."""
+    serializer = ConversationCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    conversation = serializer.save()
+    return Response(
+        ConversationSerializer(conversation).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET"])
+def conversation_detail(request, conversation_id):
+    """Get a conversation with its full message history."""
+    try:
+        conversation = Conversation.objects.get(id=conversation_id)
+    except Conversation.DoesNotExist:
+        return Response(
+            {"error": "Conversation not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(ConversationSerializer(conversation).data)
+
+
+@api_view(["POST"])
+def conversation_ask(request, conversation_id):
+    """Ask a question within a conversation (RAG + history)."""
+    try:
+        conversation = Conversation.objects.get(id=conversation_id)
+    except Conversation.DoesNotExist:
+        return Response(
+            {"error": "Conversation not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    serializer = AskQuestionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    question = serializer.validated_data["question"]
+
+    if not DocumentChunk.objects.exists():
+        return Response({
+            "answer": "No study materials have been uploaded yet. Please upload documents first.",
+            "sources": [],
+        })
+
+    try:
+        answer, source_chunks = ask_with_rag(question, conversation)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    return Response({
+        "answer": answer,
+        "sources": [
+            {
+                "document": chunk["document_title"],
+                "text_preview": chunk["chunk_text"][:200] + "..."
+                    if len(chunk["chunk_text"]) > 200
+                    else chunk["chunk_text"],
+                "relevance_score": round(1 - chunk["distance"], 3),
+            }
+            for chunk in source_chunks
+        ],
+    })
