@@ -1,4 +1,6 @@
+
 ===DOCUMENT UPLOADS===
+
 1. Python data types
 curl -s -X POST http://localhost:8000/api/documents/ \
   -H "Content-Type: application/json" \
