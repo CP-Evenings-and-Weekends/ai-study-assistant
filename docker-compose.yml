@@ -9,6 +9,18 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
+      
+  api:
+    build: .
+    environment:
+      - DB_HOST=db
+      - LLM_API_BASE_URL=http://host.docker.internal:11434
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+     
 volumes:
   pgdata:
