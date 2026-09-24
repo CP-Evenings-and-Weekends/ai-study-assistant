@@ -135,3 +135,14 @@ def conversation_ask(request, conversation_id):
             for chunk in source_chunks
         ],
     })
+
+@api_view(["DELETE"])
+def document_delete(request, document_id):
+    """Delete a document and cascade-delete its chunks."""
+    try:
+        document = Document.objects.get(id=document_id)
+    except Document.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    document.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
