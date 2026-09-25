@@ -2,6 +2,8 @@
 
 Capstone assignment for week 17: **complete the Study Assistant** by finishing everything from Part 1 of Saturday's [lesson](https://github.com/CP-Evenings-and-Weekends/curriculum/blob/main/Module_06_AI_LLMs/week17/day4/README.md), then extend it with a delete endpoint.
 
+**Due Sunday night.** The [hardening assignment](https://github.com/CP-Evenings-and-Weekends/harden-ai-study-assistant) is due later, before Tuesday's class, and hardens the app you finish here. Do this one first, and do not try to do both in one night.
+
 **Work in the same `study_assistant` codebase you started Tuesday.** Do not start a fresh project. Tuesday gave you documents, chunking, and embeddings; Thursday gave you the one-off `/api/ask/` endpoint; today adds conversations and history. If either earlier build isn't working yet, fix that first (the RAG Document Q&A assignment repo and the lessons have everything you need).
 
 The `docker-compose.yml`, `requirements.txt`, and `.env.example` in this repo are the same ones from Tuesday, included only as a fallback if your environment broke.
